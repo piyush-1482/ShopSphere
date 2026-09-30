@@ -42,3 +42,19 @@ jobs:
 
       - name: Build frontend Docker image
         run: docker build -t shopsphere-frontend:ci ./frontend
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: shopsphere-backend:ci
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: shopsphere-frontend:ci
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
