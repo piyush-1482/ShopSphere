@@ -1,0 +1,69 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build backend image
+        run: |
+          docker build -t shopsphere-backend:latest ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build -t shopsphere-frontend:latest ./frontend
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: shopsphere-backend:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: shopsphere-frontend:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Tag backend image
+        run: |
+          docker tag shopsphere-backend:latest \
+            ${{ steps.login-ecr.outputs.registry }}/shopsphere-backend:latest
+
+      - name: Tag frontend image
+        run: |
+          docker tag shopsphere-frontend:latest \
+            ${{ steps.login-ecr.outputs.registry }}/shopsphere-frontend:latest
+
+      - name: Push backend image
+        run: |
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/shopsphere-backend:latest
+
+      - name: Push frontend image
+        run: |
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/shopsphere-frontend:latest

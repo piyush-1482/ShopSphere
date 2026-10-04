@@ -26,6 +26,7 @@ data "aws_ami" "amazon_linux" {
 resource "aws_instance" "shopsphere_ec2" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t3.micro"
+  key_name      = "shopsphere-key"
 
   subnet_id                   = aws_subnet.shopsphere_public_subnet.id
   vpc_security_group_ids      = [aws_security_group.shopsphere_sg.id]
