@@ -1,0 +1,44 @@
+name: Deploy to EC2
+
+on:
+  workflow_run:
+    workflows:
+      - Build and Push to ECR
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 969212888523.dkr.ecr.ap-south-1.amazonaws.com
+
+            docker pull 969212888523.dkr.ecr.ap-south-1.amazonaws.com/shopsphere-backend:latest
+            docker pull 969212888523.dkr.ecr.ap-south-1.amazonaws.com/shopsphere-frontend:latest
+
+            docker rm -f shopsphere-backend || true
+            docker rm -f shopsphere-frontend || true
+
+            docker run -d \
+              --name shopsphere-backend \
+              --restart unless-stopped \
+              --env-file /home/ec2-user/backend.env \
+              --network shopsphere-network \
+              -p 5000:5000 \
+              969212888523.dkr.ecr.ap-south-1.amazonaws.com/shopsphere-backend:latest
+
+            docker run -d \
+              --name shopsphere-frontend \
+              --restart unless-stopped \
+              --network shopsphere-network \
+              -p 5173:80 \
+              969212888523.dkr.ecr.ap-south-1.amazonaws.com/shopsphere-frontend:latest
