@@ -29,3 +29,8 @@
         name: ec2-user
         groups: docker
         append: true
+
+    - name: Install AWS CLI
+      dnf:
+        name: awscli
+        state: present
